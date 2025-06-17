@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Registration</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.5s ease;
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      transition: all 0.5s ease;
+    }
+
+    .split-mode {
+      flex-direction: row;
+      width: 90%;
+      max-width: 1100px;
+      justify-content: space-between;
+    }
+
+    .register-container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 1rem;
+      width: 450px;
+      box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+      transition: all 0.5s ease;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group-half {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .form-group-half .form-group-inner {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #555;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #667eea;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    button:hover {
+      background: #5a67d8;
+    }
+
+    .webcam-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 1rem;
+      margin-left: 2rem;
+      flex: 1;
+      box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+      transition: all 0.5s ease;
+    }
+
+    .show-webcam {
+      display: flex;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+      max-width: 500px;
+    }
+
+    @media (max-width: 768px) {
+      .main-container.split-mode {
+        flex-direction: column;
+      }
+
+      .webcam-container {
+        margin-left: 0;
+        margin-top: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-container" id="mainContainer">
+    <div class="register-container" id="formContainer">
+      <h2>User Registration</h2>
+
+      <!-- Name & Student ID -->
+      <div class="form-group-half">
+        <div class="form-group-inner">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" required>
+        </div>
+        <div class="form-group-inner">
+          <label for="studentId">Student ID</label>
+          <input type="text" id="studentId" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email ID</label>
+        <input type="email" id="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required>
+      </div>
+
+      <div class="form-group">
+        <label for="department">Department</label>
+        <input type="text" id="department" required>
+      </div>
+
+      <!-- Year & Semester -->
+      <div class="form-group-half">
+        <div class="form-group-inner">
+          <label for="year">Year of Study</label>
+          <select id="year">
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+          </select>
+        </div>
+        <div class="form-group-inner">
+          <label for="semester">Semester</label>
+          <select id="semester">
+            <option value="1">1st Semester</option>
+            <option value="2">2nd Semester</option>
+            <option value="3">3rd Semester</option>
+            <option value="4">4th Semester</option>
+            <option value="5">5th Semester</option>
+            <option value="6">6th Semester</option>
+            <option value="7">7th Semester</option>
+            <option value="8">8th Semester</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <button type="button" onclick="captureFace()">Capture Face</button>
+      </div>
+
+      <button type="button" onclick="submitForm()">Register</button>
+
+    </div>
+
+    <div class="webcam-container" id="webcamContainer">
+      <video id="webcam" autoplay></video>
+      <button onclick="captureNow()">Capture Now</button>
+    </div>
+  </div>
+
+  <script>
+    function captureFace() {
+      const webcamContainer = document.getElementById('webcamContainer');
+      const mainContainer = document.getElementById('mainContainer');
+      const video = document.getElementById('webcam');
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          mainContainer.classList.add('split-mode');
+          webcamContainer.classList.add('show-webcam');
+        })
+        .catch(error => {
+          alert("Webcam access denied or not available");
+        });
+    }
+
+    let capturedFaceEncoding = null;
+
+  function captureNow() {
+    const video = document.getElementById('webcam');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const base64Image = canvas.toDataURL('image/jpeg');
+
+    fetch('http://localhost:5000/generate_encoding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ image: base64Image })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.encoding) {
+        capturedFaceEncoding = data.encoding;  // Store it for later use in submitForm
+        alert("Face captured and encoding generated!");
+      } else {
+        alert(data.error || "Face not detected.");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Face capture failed.");
+    });
+  }
+
+    function submitForm() {
+   const name = document.getElementById("name").value;
+   const studentId = document.getElementById("studentId").value;
+   const email = document.getElementById("email").value;
+   const password = document.getElementById("password").value;
+   const department = document.getElementById("department").value;
+   const year = document.getElementById("year").value;
+   const semester = document.getElementById("semester").value;
+
+   // Replace with actual face encoding from capture
+   const face_encoding = capturedFaceEncoding;
+
+   const data = {
+    name,
+    studentId,
+    email,
+    password,
+    department,
+    year,
+    semester,
+    face_encoding
+   };
+
+   fetch("http://localhost:5000/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(data)
+   })
+   .then(res => res.json())
+   .then(data => {
+    alert(data.message || data.error);
+   })
+   .catch(err => {
+    console.error(err);
+    alert("Registration failed.");
+   });
+   }
+ </script>
+
+</body>
+</html>
