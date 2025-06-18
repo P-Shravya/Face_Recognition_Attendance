@@ -23,6 +23,11 @@
             gap: 2rem;
             max-width: 1200px;
             margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 2px solid #6c63ff;
         }
 
         .webcam-section {
@@ -32,6 +37,22 @@
             border-radius: 1rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
+        .attendance-btn {
+            margin-top: 2rem;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            background-color: #6c63ff;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .attendance-btn:hover {
+            background-color: #5949d6;
+        }    
 
         .info-section {
             flex: 1;
@@ -85,6 +106,61 @@
         .logout-btn:hover {
             background: #c82333;
         }
+
+        .subjects-section {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+        }
+
+        .subject-item {
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .subject-item.marked {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .subject-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .subject-time {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .attendance-status {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #28a745;
+            display: none;
+            padding: 0.5rem;
+            background: #e8f5e9;
+            border-radius: 0.25rem;
+        }
+
+        .attendance-status.show {
+            display: block;
+        }
+
+        .no-subject {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +170,7 @@
         <div class="webcam-section">
             <h2>Webcam Feed</h2>
             <video id="webcam" autoplay playsinline></video>
+            <button onclick="markAttendance()" class="attendance-btn">Mark Attendance</button>
         </div>
         
         <div class="info-section">
@@ -114,6 +191,12 @@
                 <div class="info-item">
                     <div class="info-label">Semester</div>
                     <div class="info-value" id="semester">-</div>
+                </div>
+            </div>
+            <div class="subjects-section">
+                <h3>Current Subject</h3>
+                <div id="subjectsList">
+                    <!-- Subjects will be dynamically added here -->
                 </div>
             </div>
         </div>
@@ -140,6 +223,7 @@
                 videoElement.srcObject = stream;
             } catch (error) {
                 console.error('Error accessing webcam:', error);
+                alert("Please allow webcam access.");
             }
         }
 
@@ -148,8 +232,97 @@
             window.location.href = '/';
         }
 
-        // Start webcam when page loads
+        // Fetch today's subjects
+        async function fetchSubjects() {
+            try {
+                const response = await fetch('/get_subjects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        department: userData.Department,
+                        semester: userData.Semester
+                    })
+                });
+                const data = await response.json();
+                displaySubjects(data.subjects);
+            } catch (error) {
+                console.error('Error fetching subjects:', error);
+            }
+        }
+
+        function displaySubjects(subjects) {
+            const subjectsList = document.getElementById('subjectsList');
+            subjectsList.innerHTML = '';
+            
+            if (subjects.length === 0) {
+                subjectsList.innerHTML = `
+                    <div class="no-subject">
+                        No class scheduled at this time
+                    </div>
+                `;
+                return;
+            }
+            
+            subjects.forEach(subject => {
+                const subjectDiv = document.createElement('div');
+                subjectDiv.className = 'subject-item';
+                subjectDiv.innerHTML = `
+                    <div class="subject-name">${subject.Subject}</div>
+                    <div class="subject-time">Time: ${subject.Time_slot}</div>
+                    <div class="attendance-status" id="status-${subject.Subject}">
+                        Your attendance is marked successfully.
+                    </div>
+                `;
+                subjectsList.appendChild(subjectDiv);
+            });
+        }
+
+        async function markAttendance() {
+            const video = document.getElementById('webcam');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+
+            try {
+                const response = await fetch('/mark_attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        department: userData.Department,
+                        semester: userData.Semester,
+                        student_id: userData.Student_id
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update UI for marked subjects
+                    data.marked_subjects.forEach(subject => {
+                        const subjectDiv = document.querySelector(`[id^="status-${subject}"]`).parentElement;
+                        subjectDiv.classList.add('marked');
+                        document.getElementById(`status-${subject}`).classList.add('show');
+                    });
+                } else {
+                    alert(data.message || 'Failed to mark attendance');
+                }
+            } catch (error) {
+                console.error('Error marking attendance:', error);
+                alert('Error marking attendance');
+            }
+        }
+
+        // Start webcam and fetch subjects when page loads
         initWebcam();
+        fetchSubjects();
     </script>
 </body>
 </html> 

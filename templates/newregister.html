@@ -225,7 +225,7 @@
 
     const base64Image = canvas.toDataURL('image/jpeg');
 
-    fetch('http://localhost:5000/generate_encoding', {
+    fetch('/generate_encoding', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -270,7 +270,7 @@
     face_encoding
    };
 
-   fetch("http://localhost:5000/register", {
+   fetch("/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
      body: JSON.stringify(data)
