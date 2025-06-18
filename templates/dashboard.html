@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .webcam-section {
+            flex: 1;
+            background: white;
+            padding: 1rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-section {
+            flex: 1;
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #webcam {
+            width: 100%;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .student-info {
+            margin-top: 1rem;
+        }
+
+        .info-item {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    
+    <div class="container">
+        <div class="webcam-section">
+            <h2>Webcam Feed</h2>
+            <video id="webcam" autoplay playsinline></video>
+        </div>
+        
+        <div class="info-section">
+            <h2>Student Information</h2>
+            <div class="student-info">
+                <div class="info-item">
+                    <div class="info-label">Name</div>
+                    <div class="info-value" id="studentName">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Department</div>
+                    <div class="info-value" id="department">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Student ID</div>
+                    <div class="info-value" id="studentId">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Semester</div>
+                    <div class="info-value" id="semester">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (!userData) {
+            window.location.href = '/';
+        }
+
+        // Display user data
+        document.getElementById('studentName').textContent = userData.Student_name;
+        document.getElementById('department').textContent = userData.Department;
+        document.getElementById('studentId').textContent = userData.Student_id;
+        document.getElementById('semester').textContent = userData.Semester;
+
+        // Initialize webcam
+        async function initWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const videoElement = document.getElementById('webcam');
+                videoElement.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('userData');
+            window.location.href = '/';
+        }
+
+        // Start webcam when page loads
+        initWebcam();
+    </script>
+</body>
+</html> 

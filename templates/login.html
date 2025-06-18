@@ -158,14 +158,13 @@
 
       <!-- Register link -->
       <div class="register-link">
-        Not registered? <a href="/register">Register now</a>
+        Not registered? <a href="newregister.html">Register now</a>
       </div>
     </div>
 
     <!-- Admin Form -->
     <div class="form-section admin">
       <h2>Admin Login</h2>
-      
       <div class="form-group">
         <label for="AdminMail">Mail ID</label>
         <input type="email" id="adminMail" placeholder="Email address" />
@@ -185,11 +184,45 @@
       document.getElementById('loginBox').classList.toggle('active');
     }
 
-    function login(role) {
-      const email = document.getElementById(role === 'admin' ? 'adminMail' : 'userMail')?.value || '';
-      const password = document.getElementById(role === 'admin' ? 'adminPass' : 'userPass')?.value || '';
-      alert(`Logging in as ${role.toUpperCase()}:\nEmail: ${email}\nPassword: ${password}`);
+     async function login(role) {
+      const email = role === 'user' ? document.getElementById('userMail').value : document.getElementById('adminMail').value;
+      const password = role === 'user' ? document.getElementById('userPass').value : document.getElementById('adminPass').value;
+
+      if (!email || !password) {
+        alert("Please enter both email and password");
+        return;
+      }
+
+      try {
+        const response = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          localStorage.setItem('userData', JSON.stringify(result.student));
+          window.location.href = '/dashboard';
+        } else {
+          alert(result.message || "Invalid login credentials");
+        }
+      } 
+      catch (error) {
+        console.error("Login error:", error);
+        alert("An error occurred during login. Please try again.");
+      }
     }
+
   </script>
 
 </body>

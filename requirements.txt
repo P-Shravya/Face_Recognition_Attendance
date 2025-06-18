@@ -5,3 +5,4 @@ bcrypt
 opencv-python
 face-recognition
 numpy
+git+https://github.com/ageitgey/face_recognition_models

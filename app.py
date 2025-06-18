@@ -1,29 +1,35 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
+from werkzeug.security import check_password_hash
 import mysql.connector
 import base64
 import re
 import bcrypt
 import cv2
+import face_recognition
+import pickle
 import numpy as np
-from mysql.connector import Error
-import os
 
-app = Flask(__name__, template_folder='.')
-CORS(app) 
+app = Flask(__name__, template_folder='templates')
+app.secret_key = 'your-secret-key-here'  # Required for session
 
-def get_db_connection():
-    try:
-        db = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Sh@867417",
-            database="Student_info"
-        )
-        return db
-    except Error as e:
-        print(f"Error connecting to MySQL: {e}")
-        return None
+# Configure CORS with more specific settings
+CORS(app, 
+     resources={r"/*": {
+         "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+         "methods": ["GET", "POST", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "supports_credentials": True
+     }})
+
+# Database connection
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="Sh@867417",
+    database="Student_info"
+)
+cursor = db.cursor()
 
 # Email validation regex
 EMAIL_REGEX = r'^[\w\.-]+@[\w\.-]+\.\w+$'
@@ -43,46 +49,32 @@ def generate_encoding():
     if not image_data:
         return jsonify({'error': 'No image data provided'}), 400
 
-    try:
-        # Strip base64 prefix
-        image_data = image_data.split(',')[1]
-        image_bytes = base64.b64decode(image_data)
-        np_img = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+    # Strip base64 prefix
+    image_data = image_data.split(',')[1]
+    image_bytes = base64.b64decode(image_data)
+    np_img = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
 
-        # Convert to grayscale
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Load the face cascade classifier
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        
-        # Detect faces
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-        
-        if len(faces) == 0:
-            return jsonify({'error': 'No face detected'}), 400
+    # Generate encoding
+    face_locations = face_recognition.face_locations(img)
+    if len(face_locations) == 0:
+        return jsonify({'error': 'No face detected'}), 400
 
-        # Get the first face
-        x, y, w, h = faces[0]
-        face_img = gray[y:y+h, x:x+w]
-        
-        # Resize to a standard size
-        face_img = cv2.resize(face_img, (100, 100))
-        
-        # Convert to bytes
-        face_bytes = face_img.tobytes()
+    encodings = face_recognition.face_encodings(img, face_locations)
+    if len(encodings) == 0:
+        return jsonify({'error': 'Encoding failed'}), 400
 
-        return jsonify({
-            'encoding': base64.b64encode(face_bytes).decode('utf-8')
-        })
-    except Exception as e:
-        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
+    encoding = encodings[0]
+    encoding_blob = np.array(encoding).tobytes()
+
+    # Send encoding back as base64 for frontend use (or send array if needed)
+    return jsonify({
+        'encoding': base64.b64encode(encoding_blob).decode('utf-8')
+    })
 
 @app.route("/register", methods=["POST"])
 def register_user():
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
 
     #python variables storing JSON objects i.e: from input forms of javaScript
     name = data.get("name")
@@ -92,27 +84,18 @@ def register_user():
     department = data.get("department")
     year = data.get("year")
     semester = data.get("semester")
-    face_encoding_b64 = data.get("face_encoding")
-
-    # Validate required fields
-    required_fields = ["name", "studentId", "email", "password", "department", "year", "semester", "face_encoding"]
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({"error": f"Missing required field: {field}"}), 400
+    face_encoding_b64 = data.get("face_encoding")  # list from JS or convert later
 
     # Input validation
     if not re.match(EMAIL_REGEX, email):
         return jsonify({"error": "Invalid email format"}), 400
 
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+    # Simulate numpy array for face_encoding
+    face_encoding_blob = base64.b64decode(face_encoding_b64)
+
     try:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        face_encoding_blob = base64.b64decode(face_encoding_b64)
-
-        db = get_db_connection()
-        if not db:
-            return jsonify({"error": "Database connection failed"}), 500
-
-        cursor = db.cursor()
         query = """
         INSERT INTO students (
             Student_name, Student_id, Department,
@@ -124,13 +107,39 @@ def register_user():
             email, hashed_password.decode('utf-8'), face_encoding_blob
         ))
         db.commit()
-        cursor.close()
-        db.close()
         return jsonify({"message": "User registered successfully"})
     except mysql.connector.IntegrityError as e:
-        return jsonify({"error": f"Database error: {str(e)}"}), 409
-    except Exception as e:
-        return jsonify({"error": f"Registration failed: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 409
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+        
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    cursor.execute("SELECT Student_name, Student_id, Department, Semester, Hashed_pass FROM students WHERE Email=%s", (email,))
+    user = cursor.fetchone()
+
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[4].encode('utf-8')):
+        student_data = {
+            "Student_name": user[0],
+            "Student_id": user[1],
+            "Department": user[2],
+            "Semester": user[3]
+        }
+        session['student'] = student_data
+        return jsonify({"status": "success", "student": student_data})
+    else:
+        return jsonify({"status": "fail", "message": "Invalid credentials"}), 401
+
+@app.route('/dashboard')
+def dashboard():
+    if 'student' in session:
+        return render_template("dashboard.html", student=session['student'])
+    return redirect(url_for('login'))  
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
