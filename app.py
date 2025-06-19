@@ -116,13 +116,34 @@ subject_schedule_IT = {
         12: 'SE',
         13: 'AIML',
         14: 'AIML',
-        15: 'NLP'
+        15: 'NLP',
+        8: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     },
     'TUE': {
         9: 'OST',
         10: 'ES',
         11: 'SE',
         12: 'AIML',
+        8: 'Testing',
+        13: 'Testing',
+        14: 'Testing',
+        15: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     },
     'WED': {
         9: 'SE',
@@ -130,7 +151,17 @@ subject_schedule_IT = {
         11: 'ES LAB',
         12: 'ES LAB',
         14: 'CRT',
-        15: 'AIML'
+        15: 'AIML',
+        8: 'Testing',
+        13: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     },
     'THU': {
         9: 'NLP',
@@ -138,7 +169,17 @@ subject_schedule_IT = {
         11: 'ES',
         12: 'OST',
         14: 'NLP',
-        15: 'AIML'
+        15: 'AIML',
+        8: 'Testing',
+        13: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     },
     'FRI': {
         9: 'AIML',
@@ -146,14 +187,35 @@ subject_schedule_IT = {
         11: 'NLP',
         12: 'OST',
         14: 'SE LAB',
-        15: 'AIML LAB'
+        15: 'AIML LAB',
+        8: 'Testing',
+        13: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     },
     'SAT': {
         9: 'ES',
         10: 'LIBRARY',
         11: 'MINI PROJECTS',
         12: 'MINI PROJECTS',
-        14: 'TECHNICAL SEMINARS'
+        14: 'TECHNICAL SEMINARS',
+        8: 'Testing',
+        13: 'Testing',
+        15: 'Testing',
+        16: 'Testing',
+        17: 'Testing',
+        18: 'Testing',
+        19: 'Testing',
+        20: 'Testing',
+        21: 'Testing',
+        22: 'Testing',
+        23: 'Testing',
     }
 }
 
@@ -309,26 +371,28 @@ def generate_encoding():
 @app.route("/register", methods=["POST"])
 def register_user():
     data = request.get_json()
-
+    print(f"[DEBUG] Registration data received: {data}")
     #python variables storing JSON objects i.e: from input forms of javaScript
     name = data.get("name")
     student_id = data.get("studentId")
     email = data.get("email")
     password = data.get("password")
-    department = data.get("department")
+    department = data.get("department").strip().upper()
     year = data.get("year")
     semester = data.get("semester")
     face_encoding_b64 = data.get("face_encoding")  # list from JS or convert later
-
+    print(f"[DEBUG] name={name}, student_id={student_id}, email={email}, department={department}, year={year}, semester={semester}")
+    print(f"[DEBUG] face_encoding_b64 exists: {face_encoding_b64 is not None}")
     # Input validation
     if not re.match(EMAIL_REGEX, email):
+        print("[DEBUG] Invalid email format.")
         return jsonify({"error": "Invalid email format"}), 400
-
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-    # Simulate numpy array for face_encoding
-    face_encoding_blob = base64.b64decode(face_encoding_b64)
-
+    try:
+        face_encoding_blob = base64.b64decode(face_encoding_b64)
+    except Exception as e:
+        print(f"[DEBUG] Error decoding face encoding: {e}")
+        return jsonify({"error": "Invalid face encoding"}), 400
     try:
         query = """
         INSERT INTO students (
@@ -341,9 +405,14 @@ def register_user():
             email, hashed_password.decode('utf-8'), face_encoding_blob
         ))
         db.commit()
+        print("[DEBUG] Registration successful.")
         return jsonify({"message": "User registered successfully"})
     except mysql.connector.IntegrityError as e:
+        print(f"[DEBUG] Integrity error: {e}")
         return jsonify({"error": str(e)}), 409
+    except Exception as e:
+        print(f"[DEBUG] Registration error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -379,50 +448,59 @@ def dashboard():
 def get_current_time_slot():
     now = datetime.now()
     hour = now.hour
-    slot_map = {
-        8: '8:00-9:00',
-        9: '9:00-10:00',
-        10: '10:00-11:00',
-        11: '11:00-12:00',
-        12: '12:00-13:00',
-        14: '14:00-15:00',
-        15: '15:00-16:00',
-        16: '16:00-17:00'
-    }
-    return slot_map.get(hour, None)
+    if 8 <= hour < 9:
+        return '8:00-9:00'
+    elif 9 <= hour < 10:
+        return '9:00-10:00'
+    elif 10 <= hour < 11:
+        return '10:00-11:00'
+    elif 11 <= hour < 12:
+        return '11:00-12:00'
+    elif 12 <= hour < 13:
+        return '12:00-13:00'
+    elif 14 <= hour < 15:
+        return '14:00-15:00'
+    elif 15 <= hour < 16:
+        return '15:00-16:00'
+    elif 16 <= hour < 17:
+        return '16:00-17:00'
+    else:
+        return None
 
 @app.route('/get_subjects', methods=['POST'])
 def get_subjects():
     data = request.json
-    department = data.get('department')
+    department = data.get('department').strip().upper()
     semester = data.get('semester')
-    
-    # Get current time slot
+    print(f"[DEBUG] /get_subjects called with department={department}, semester={semester}")
     time_slot = get_current_time_slot()
+    print(f"[DEBUG] Current time slot: {time_slot}")
     if not time_slot:
+        print("[DEBUG] No valid time slot found.")
         return jsonify({"subjects": []})
-    
-    # Get department schedule
     schedule = get_department_schedule(department)
+    print(f"[DEBUG] Department schedule: {schedule}")
     if not schedule:
+        print("[DEBUG] Invalid department.")
         return jsonify({"error": "Invalid department"}), 400
-    
-    # Get current subject
     current_hour = int(time_slot.split(':')[0])
     current_subject = get_current_subject(schedule, current_hour)
+    print(f"[DEBUG] Current subject: {current_subject}")
     if not current_subject:
+        print("[DEBUG] No current subject found.")
         return jsonify({"subjects": []})
-    
-    # Query the appropriate attendance table
     table_name = f"attendance_{department}_{semester}"
+    current_day = datetime.now().strftime('%A')
+    current_date = datetime.now().date()
     query = f"""
     SELECT DISTINCT Subject, Time_slot 
     FROM {table_name} 
-    WHERE Subject = %s AND Time_slot = %s
+    WHERE Subject = %s AND Time_slot = %s AND Day = %s AND Date = %s
     """
     try:
-        cursor.execute(query, (current_subject, time_slot))
+        cursor.execute(query, (current_subject, time_slot, current_day, current_date))
         subjects = cursor.fetchall()
+        print(f"[DEBUG] Subjects fetched: {subjects}")
         return jsonify({
             "subjects": [
                 {"Subject": subject[0], "Time_slot": subject[1]}
@@ -430,75 +508,82 @@ def get_subjects():
             ]
         })
     except mysql.connector.Error as e:
+        print(f"[DEBUG] MySQL error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
     data = request.json
     image_data = data.get('image')
-    department = data.get('department')
+    department = data.get('department').strip().upper()
     semester = data.get('semester')
     student_id = data.get('student_id')
-    
-    # Get current time slot
+    print(f"[DEBUG] /mark_attendance called with student_id={student_id}, department={department}, semester={semester}")
     time_slot = get_current_time_slot()
+    print(f"[DEBUG] Current time slot: {time_slot}")
     if not time_slot:
+        print("[DEBUG] No valid time slot found.")
         return jsonify({"success": False, "message": "Outside of class hours"})
-    
     current_day = datetime.now().strftime('%A')
-    
+    print(f"[DEBUG] Current day: {current_day}")
+    current_date = datetime.now().date()
+    print(f"[DEBUG] Current date: {current_date}")
     # Process face image
     image_data = image_data.split(',')[1]
     image_bytes = base64.b64decode(image_data)
     np_img = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
-    
     # Generate face encoding
     face_locations = face_recognition.face_locations(img)
+    print(f"[DEBUG] Face locations found: {face_locations}")
     if len(face_locations) == 0:
+        print("[DEBUG] No face detected in image.")
         return jsonify({"success": False, "message": "No face detected"})
-    
     current_encoding = face_recognition.face_encodings(img, face_locations)[0]
-    
     # Get stored face encoding
     cursor.execute("SELECT Face_encoded FROM students WHERE Student_id = %s", (student_id,))
     result = cursor.fetchone()
+    print(f"[DEBUG] Stored face encoding fetched: {result is not None}")
     if not result:
+        print("[DEBUG] Student not found in database.")
         return jsonify({"success": False, "message": "Student not found"})
-    
     stored_encoding = np.frombuffer(result[0])
-    
     # Compare face encodings
     match = face_recognition.compare_faces([stored_encoding], current_encoding, tolerance=0.6)[0]
+    print(f"[DEBUG] Face match result: {match}")
     if not match:
+        print("[DEBUG] Face verification failed.")
         return jsonify({"success": False, "message": "Face verification failed"})
-    
-    # Get subjects for current time slot
     table_name = f"attendance_{department}_{semester}"
-    query = f"""
-    SELECT Subject 
-    FROM {table_name} 
-    WHERE Day = %s AND Time_slot = %s
+    # Check if attendance record exists for this student, date, subject, time slot, and day
+    select_query = f"""
+    SELECT 1 FROM {table_name} WHERE Student_id = %s AND Subject = %s AND Date = %s AND Time_slot = %s AND Day = %s
     """
-    cursor.execute(query, (current_day, time_slot))
-    subjects = cursor.fetchall()
-    
-    marked_subjects = []
-    for subject in subjects:
-        # Update attendance
-        update_query = f"""
-        UPDATE {table_name} 
-        SET Status = TRUE 
-        WHERE Student_id = %s AND Subject = %s AND Date = CURRENT_DATE AND Time_slot = %s
+    schedule = get_department_schedule(department)
+    current_hour = int(time_slot.split(':')[0])
+    current_subject = get_current_subject(schedule, current_hour)
+    cursor.execute(select_query, (student_id, current_subject, current_date, time_slot, current_day))
+    exists = cursor.fetchone()
+    if not exists:
+        # Insert a new attendance record for this student, subject, date, time slot, and day
+        insert_query = f"""
+        INSERT INTO {table_name} (Date, Student_id, Subject, Time_slot, Day, Status)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(update_query, (student_id, subject[0], time_slot))
-        marked_subjects.append(subject[0])
-    
+        cursor.execute(insert_query, (current_date, student_id, current_subject, time_slot, current_day, False))
+        db.commit()
+    # Mark attendance (set Status = TRUE)
+    update_query = f"""
+    UPDATE {table_name}
+    SET Status = TRUE
+    WHERE Student_id = %s AND Subject = %s AND Date = %s AND Time_slot = %s AND Day = %s
+    """
+    cursor.execute(update_query, (student_id, current_subject, current_date, time_slot, current_day))
     db.commit()
-    
+    print(f"[DEBUG] Attendance marked for student {student_id}, subject {current_subject}, date {current_date}, time_slot {time_slot}, day {current_day}")
     return jsonify({
         "success": True,
-        "marked_subjects": marked_subjects
+        "marked_subjects": [current_subject]
     })
 
 if __name__ == '__main__':
