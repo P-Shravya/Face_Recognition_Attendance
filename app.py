@@ -429,17 +429,21 @@ def login():
     cursor.execute("SELECT Student_name, Student_id, Department, Semester, Hashed_pass FROM students WHERE Email=%s", (email,))
     user = cursor.fetchone()
 
-    if user and bcrypt.checkpw(password.encode('utf-8'), user[4].encode('utf-8')):
-        student_data = {
-            "Student_name": user[0],
-            "Student_id": user[1],
-            "Department": user[2],
-            "Semester": user[3]
-        }
-        session['student'] = student_data
-        return jsonify({"status": "success", "student": student_data})
-    else:
-        return jsonify({"status": "fail", "message": "Invalid credentials"}), 401
+    if not user:
+        return jsonify({"status": "fail", "message": "Wrong email entered."}), 401
+
+    # Using bcrypt.checkpw for robust password validation
+    if not bcrypt.checkpw(password.encode('utf-8'), user[4].encode('utf-8')):
+        return jsonify({"status": "fail", "message": "Wrong password entered."}), 401
+
+    student_data = {
+        "Student_name": user[0],
+        "Student_id": user[1],
+        "Department": user[2],
+        "Semester": user[3]
+    }
+    session['student'] = student_data
+    return jsonify({"status": "success", "student": student_data})
 
 @app.route('/dashboard')
 def dashboard():
@@ -475,7 +479,8 @@ def get_subjects():
     data = request.json
     department = data.get('department').strip().upper()
     semester = data.get('semester')
-    print(f"[DEBUG] /get_subjects called with department={department}, semester={semester}")
+    student_id = data.get('student_id')
+    print(f"[DEBUG] /get_subjects called with department={department}, semester={semester}, student_id={student_id}")
     time_slot = get_current_time_slot()
     print(f"[DEBUG] Current time slot: {time_slot}")
     if not time_slot:
@@ -493,17 +498,31 @@ def get_subjects():
         print("[DEBUG] No current subject found.")
         return jsonify({"subjects": []})
     
+    is_marked = False
+    if student_id:
+        table_name = f"attendance_{get_department_table_name(department)}_{semester}"
+        current_date_obj = datetime.now().date()
+        try:
+            query = f"SELECT Status FROM {table_name} WHERE Student_id = %s AND Subject = %s AND Date = %s AND Time_slot = %s"
+            cursor.execute(query, (student_id, current_subject, current_date_obj, time_slot))
+            result = cursor.fetchone()
+            if result and result[0] == 1:
+                is_marked = True
+        except mysql.connector.Error as e:
+            print(f"[DEBUG] Could not check attendance status in get_subjects: {e}")
+
     current_date = datetime.now().strftime('%Y-%m-%d')
     current_day = datetime.now().strftime('%A')
 
-    # Return the current subject based on schedule, not from database
+    # Return the current subject with its status
     return jsonify({
         "subjects": [
             {
                 "Subject": current_subject, 
                 "Time_slot": time_slot,
                 "Date": current_date,
-                "Day": current_day
+                "Day": current_day,
+                "is_marked": is_marked
             }
         ]
     })
@@ -570,16 +589,19 @@ def mark_attendance():
     table_name = f"attendance_{get_department_table_name(department)}_{semester}"
     
     try:
-        # Check if attendance record exists for this student, date, subject, time slot, and day
+        # Check if attendance has already been marked successfully
         select_query = f"""
-        SELECT 1 FROM {table_name} 
+        SELECT Status FROM {table_name} 
         WHERE Student_id = %s AND Subject = %s AND Date = %s AND Time_slot = %s AND Day = %s
         """
         cursor.execute(select_query, (student_id, current_subject, current_date, time_slot, current_day))
-        exists = cursor.fetchone()
-        
-        if not exists:
-            # Insert a new attendance record for this student, subject, date, time slot, and day
+        result = cursor.fetchone()
+
+        if result and result[0] == 1: # Status is TRUE
+            return jsonify({"success": False, "message": "Your attendance is already marked."})
+
+        # Check if an attendance record exists, if not create one
+        if not result:
             insert_query = f"""
             INSERT INTO {table_name} (Date, Student_id, Subject, Time_slot, Day, Status)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -587,7 +609,7 @@ def mark_attendance():
             cursor.execute(insert_query, (current_date, student_id, current_subject, time_slot, current_day, True))
             print(f"[DEBUG] New attendance record created for student {student_id}")
         else:
-            # Update existing attendance record to mark as present
+            # Mark attendance (set Status = TRUE)
             update_query = f"""
             UPDATE {table_name}
             SET Status = TRUE

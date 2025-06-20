@@ -42,19 +42,29 @@ def admin_login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    
     if not email or not password:
         return jsonify({'status': 'fail', 'message': 'Missing credentials'}), 400
+
     conn = get_db()
     cur = conn.cursor(dictionary=True)
     cur.execute('SELECT * FROM admins WHERE email = %s', (email,))
     admin = cur.fetchone()
+
+    if not admin:
+        cur.close()
+        conn.close()
+        return jsonify({'status': 'fail', 'message': 'Wrong admin email entered.'}), 401
+    
+    if not check_password_hash(admin['password_hash'], password):
+        cur.close()
+        conn.close()
+        return jsonify({'status': 'fail', 'message': 'Wrong password entered.'}), 401
+
+    session['admin_id'] = admin['id']
     cur.close()
     conn.close()
-    if admin and check_password_hash(admin['password_hash'], password):
-        session['admin_id'] = admin['id']
-        return jsonify({'status': 'success', 'admin': {'id': admin['id'], 'email': admin['email'], 'admin_name': admin['admin_name']}})
-    else:
-        return jsonify({'status': 'fail', 'message': 'Invalid credentials'}), 401
+    return jsonify({'status': 'success', 'admin': {'id': admin['id'], 'email': admin['email'], 'admin_name': admin['admin_name']}})
 
 @admin_bp.route('/admin_dashboard')
 def admin_dashboard():

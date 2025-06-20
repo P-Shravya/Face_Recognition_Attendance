@@ -205,11 +205,13 @@
           body: JSON.stringify({ email, password })
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const result = await response.json();
+
+        if (!response.ok) {
+          // Handles 4xx/5xx errors and displays the specific message from the server
+          alert(result.message || "An error occurred. Please check your credentials.");
+          return;
+        }
 
         if (result.status === 'success') {
           if (role === 'user') {
@@ -219,13 +221,11 @@
             // Admin login successful, redirect to admin dashboard
             window.location.href = '/admin_dashboard';
           }
-        } else {
-          alert(result.message || "Invalid login credentials");
         }
       } 
       catch (error) {
         console.error("Login error:", error);
-        alert("An error occurred during login. Please try again.");
+        alert("A network error occurred during login. Please try again.");
       }
     }
 

@@ -71,6 +71,16 @@
     .filter-btn:hover {
       background: #5a67d8;
     }
+    .filter-btn-container {
+      flex-basis: 100%;
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .status-present {
+      background-color: #d4edda;
+      color: #155724;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -81,11 +91,12 @@
         <label for="department">Department:</label>
         <select id="department">
           <option value="">All</option>
+          <option value="IT">IT</option>
           <option value="CSE">CSE</option>
+          <option value="AIML">AIML</option>
+          <option value="CME">CME</option>
           <option value="ECE">ECE</option>
           <option value="EEE">EEE</option>
-          <option value="MECH">MECH</option>
-          <option value="CIVIL">CIVIL</option>
         </select>
       </div>
       <div>
@@ -104,19 +115,38 @@
       </div>
       <div>
         <label for="period">Period:</label>
-        <select id="period">
+        <select id="period" onchange="updatePeriodFields()">
           <option value="date">By Date</option>
           <option value="week">By Week</option>
           <option value="month">By Month</option>
         </select>
       </div>
-      <div id="date-range-fields">
+      <!-- Date input for 'By Date' -->
+      <div id="date-field" style="display: none;">
+        <label for="single-date">Date:</label>
+        <input type="date" id="single-date" />
+      </div>
+      <!-- Date range inputs for 'By Week' -->
+      <div id="date-range-fields" style="display: none;">
         <label for="start">Start:</label>
         <input type="date" id="start" />
         <label for="end">End:</label>
         <input type="date" id="end" />
       </div>
-      <button class="filter-btn" onclick="fetchAttendanceLogs()">Filter</button>
+      <!-- Month and Year select for 'By Month' -->
+      <div id="month-field" style="display: none; gap: 1.5rem;">
+        <div>
+          <label for="year">Year:</label>
+          <select id="year"></select>
+        </div>
+        <div>
+          <label for="month">Month:</label>
+          <select id="month"></select>
+        </div>
+      </div>
+      <div class="filter-btn-container">
+        <button class="filter-btn" onclick="fetchAttendanceLogs()">Filter</button>
+      </div>
     </div>
     <table class="attendance-table">
       <thead>
@@ -136,13 +166,65 @@
     </table>
   </div>
   <script>
+    function updatePeriodFields() {
+      const period = document.getElementById('period').value;
+      document.getElementById('date-field').style.display = 'none';
+      document.getElementById('date-range-fields').style.display = 'none';
+      document.getElementById('month-field').style.display = 'none';
+
+      if (period === 'date') {
+        document.getElementById('date-field').style.display = 'block';
+      } else if (period === 'week') {
+        document.getElementById('date-range-fields').style.display = 'block';
+      } else if (period === 'month') {
+        document.getElementById('month-field').style.display = 'flex';
+      }
+    }
+
+    function populateYears() {
+        const yearSelect = document.getElementById('year');
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= currentYear - 5; year--) {
+            yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+        }
+    }
+
+    function populateMonths() {
+        const monthSelect = document.getElementById('month');
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        monthNames.forEach((month, index) => {
+            const monthValue = index + 1;
+            monthSelect.innerHTML += `<option value="${monthValue}">${month}</option>`;
+        });
+    }
+
     function fetchAttendanceLogs() {
       const department = document.getElementById('department').value;
       const semester = document.getElementById('semester').value;
       const period = document.getElementById('period').value;
-      const start = document.getElementById('start').value;
-      const end = document.getElementById('end').value;
+      
+      let start = '';
+      let end = '';
+
+      if (period === 'date') {
+        start = document.getElementById('single-date').value;
+        end = start;
+      } else if (period === 'week') {
+        start = document.getElementById('start').value;
+        end = document.getElementById('end').value;
+      } else if (period === 'month') {
+        const year = document.getElementById('year').value;
+        const month = document.getElementById('month').value;
+        if (year && month) {
+            start = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month, 0).getDate();
+            end = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        }
+      }
+
       let url = `/api/admin/attendance_logs?department=${department}&semester=${semester}&period=${period}&start=${start}&end=${end}`;
+      
       fetch(url)
         .then(res => res.json())
         .then(data => {
@@ -150,13 +232,14 @@
           tbody.innerHTML = '';
           if (data.logs && data.logs.length > 0) {
             data.logs.forEach(log => {
+              const statusClass = log.status === 'Present' ? 'status-present' : '';
               tbody.innerHTML += `<tr>
                 <td>${log.student_name}</td>
                 <td>${log.department}</td>
                 <td>${log.semester}</td>
                 <td>${log.date}</td>
                 <td>${log.period}</td>
-                <td>${log.status}</td>
+                <td class="${statusClass}">${log.status}</td>
                 <td>${log.attendance_percent || '-'}</td>
               </tr>`;
             });
@@ -165,6 +248,12 @@
           }
         });
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      populateYears();
+      populateMonths();
+      updatePeriodFields();
+    });
   </script>
 </body>
 </html> 
