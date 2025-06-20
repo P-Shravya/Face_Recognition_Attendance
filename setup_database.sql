@@ -522,4 +522,11 @@ CREATE TABLE IF NOT EXISTS attendance_EEE_8 (
     Day VARCHAR(10) NOT NULL,
     Status BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (Date, Student_id, Subject, Time_slot)
+);
+
+CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    admin_name TEXT
 ); 

@@ -135,6 +135,21 @@
             margin-bottom: 0.5rem;
         }
 
+        .subject-details {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .subject-detail-box {
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+        }
+
         .subject-time {
             color: #666;
             font-size: 0.9rem;
@@ -270,7 +285,11 @@
                 subjectDiv.className = 'subject-item';
                 subjectDiv.innerHTML = `
                     <div class="subject-name">${subject.Subject}</div>
-                    <div class="subject-time">Time: ${subject.Time_slot}</div>
+                    <div class="subject-details">
+                        <div class="subject-detail-box">Time: ${subject.Time_slot}</div>
+                        <div class="subject-detail-box">Day: ${subject.Day}</div>
+                        <div class="subject-detail-box">Date: ${subject.Date}</div>
+                    </div>
                     <div class="attendance-status" id="status-${subject.Subject}">
                         Your attendance is marked successfully.
                     </div>
@@ -311,12 +330,13 @@
                         subjectDiv.classList.add('marked');
                         document.getElementById(`status-${subject}`).classList.add('show');
                     });
+                    alert('Attendance marked successfully!');
                 } else {
                     alert(data.message || 'Failed to mark attendance');
                 }
             } catch (error) {
                 console.error('Error marking attendance:', error);
-                alert('Error marking attendance');
+                alert('Error marking attendance. Check console for details.');
             }
         }
 

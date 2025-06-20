@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      background: #f4f6fb;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .dashboard-container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      padding: 2rem 2.5rem;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 2rem;
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+    .filters select, .filters input {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .filters label {
+      font-weight: 500;
+      margin-right: 0.5rem;
+    }
+    .attendance-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+    }
+    .attendance-table th, .attendance-table td {
+      border: 1px solid #e0e0e0;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+    .attendance-table th {
+      background: #667eea;
+      color: #fff;
+    }
+    .attendance-table tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .filter-btn {
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .filter-btn:hover {
+      background: #5a67d8;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <h1>Admin Attendance Dashboard</h1>
+    <div class="filters">
+      <div>
+        <label for="department">Department:</label>
+        <select id="department">
+          <option value="">All</option>
+          <option value="CSE">CSE</option>
+          <option value="ECE">ECE</option>
+          <option value="EEE">EEE</option>
+          <option value="MECH">MECH</option>
+          <option value="CIVIL">CIVIL</option>
+        </select>
+      </div>
+      <div>
+        <label for="semester">Semester:</label>
+        <select id="semester">
+          <option value="">All</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <div>
+        <label for="period">Period:</label>
+        <select id="period">
+          <option value="date">By Date</option>
+          <option value="week">By Week</option>
+          <option value="month">By Month</option>
+        </select>
+      </div>
+      <div id="date-range-fields">
+        <label for="start">Start:</label>
+        <input type="date" id="start" />
+        <label for="end">End:</label>
+        <input type="date" id="end" />
+      </div>
+      <button class="filter-btn" onclick="fetchAttendanceLogs()">Filter</button>
+    </div>
+    <table class="attendance-table">
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Department</th>
+          <th>Semester</th>
+          <th>Date</th>
+          <th>Period</th>
+          <th>Status</th>
+          <th>Attendance %</th>
+        </tr>
+      </thead>
+      <tbody id="attendanceBody">
+        <!-- Attendance logs will be inserted here -->
+      </tbody>
+    </table>
+  </div>
+  <script>
+    function fetchAttendanceLogs() {
+      const department = document.getElementById('department').value;
+      const semester = document.getElementById('semester').value;
+      const period = document.getElementById('period').value;
+      const start = document.getElementById('start').value;
+      const end = document.getElementById('end').value;
+      let url = `/api/admin/attendance_logs?department=${department}&semester=${semester}&period=${period}&start=${start}&end=${end}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('attendanceBody');
+          tbody.innerHTML = '';
+          if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(log => {
+              tbody.innerHTML += `<tr>
+                <td>${log.student_name}</td>
+                <td>${log.department}</td>
+                <td>${log.semester}</td>
+                <td>${log.date}</td>
+                <td>${log.period}</td>
+                <td>${log.status}</td>
+                <td>${log.attendance_percent || '-'}</td>
+              </tr>`;
+            });
+          } else {
+            tbody.innerHTML = '<tr><td colspan="7">No records found.</td></tr>';
+          }
+        });
+    }
+  </script>
+</body>
+</html> 
